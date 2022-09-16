@@ -49,6 +49,7 @@ use std::net::Ipv4Addr;
 use std::str::FromStr;
 use colorful::Colorful;
 use colorful::Color;
+use chrono::prelude::*;
 
 #[derive(Debug, Parser)]
 #[clap(name = "libp2p DCUtR client")]
@@ -60,6 +61,10 @@ struct Opts {
     /// Fixed value to generate deterministic peer id.
     #[clap(long)]
     secret_key_seed: u8,
+
+    /// nickname
+    #[clap(long)]
+    name: String,
 
     /// The listening address
     #[clap(long)]
@@ -298,7 +303,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 }
                 SwarmEvent::Behaviour(Event::Dcutr(event)) => {
                     info!("{:?}", event);
-                            established = true;
+                    established = true;
                 }
                 SwarmEvent::Behaviour(Event::Identify(event)) => {
                     info!("{:?}", event)
@@ -335,17 +340,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
             },
             event = swarm.select_next_some() => match event {
                 SwarmEvent::Behaviour(Event::Gossip(GossipsubEvent::Message{
-                    propagation_source: peer_id,
+                    propagation_source: _,
                     message_id: _,
                     message,
                 })) => println!(
-                    "{} from: {:?}",
-                    String::from_utf8_lossy(&message.data).color(Color::LightMagenta),
-                    peer_id,
+                    "{} from: {}",
+                    String::from_utf8_lossy(&message.data).color(Color::LightYellow3),
+                    format!("{} {}", opts.name.clone(), Local::now().format("%a %Y-%m-%d %H:%M:%S").to_string())
+                        .color(Color::LightCyan1),
                 ),
-                SwarmEvent::NewListenAddr { address, .. } => {
-                    println!("Listening on {:?}", address);
-                }
                 _ => {}
             }
         }
