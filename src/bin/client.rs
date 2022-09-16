@@ -36,13 +36,15 @@ use libp2p::swarm::{SwarmBuilder, SwarmEvent};
 use libp2p::tcp::{GenTcpConfig, TcpTransport};
 use libp2p::Transport;
 use libp2p::gossipsub::{
-    self, GossipsubEvent, IdentTopic as Topic, MessageAuthenticity, ValidationMode,
+    self, GossipsubEvent, MessageId, GossipsubMessage, IdentTopic as Topic, MessageAuthenticity, ValidationMode,
 };
 use libp2p::yamux;
 use libp2p::{identity, NetworkBehaviour, PeerId};
 use log::info;
+use std::collections::hash_map::DefaultHasher;
 use std::convert::TryInto;
 use std::error::Error;
+use std::hash::{Hash, Hasher};
 use std::net::Ipv4Addr;
 use std::str::FromStr;
 
@@ -164,16 +166,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let mut swarm = {
         // use the hash of message as id to conetnt-address
-        /* let message_id_fn = | message: &GossipsubMessage | {
+        let message_id_fn = | message: &GossipsubMessage | {
             let mut s = DefaultHasher::new();
             message.data.hash(&mut s);
             MessageId::from(s.finish().to_string())
-        }; */
+        };
         // set a custom gossipsub
         let gossipsub_config = gossipsub::GossipsubConfigBuilder::default()
             .heartbeat_interval(Duration::from_secs(10)) // This is set to aid debugging by not cluttering the log space
             .validation_mode(ValidationMode::Strict) // set the message validation. Enforce message validation
-            //.message_id_fn(message_id_fn) // content-address. not to propagate same content messages
+            .message_id_fn(message_id_fn) // content-address. not to propagate same content messages
             .build()
             .expect("Valid config");
         let mut gossip = gossipsub::Gossipsub::new(MessageAuthenticity::Signed(local_key.clone()), gossipsub_config)
@@ -294,7 +296,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 }
                 SwarmEvent::Behaviour(Event::Dcutr(event)) => {
                     info!("{:?}", event);
-                    established = true
+                    established = true;
                 }
                 SwarmEvent::Behaviour(Event::Identify(event)) => {
                     info!("{:?}", event)
@@ -337,7 +339,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 })) => println!(
                     "\033[35m{}\033[0m from peer: {:?}",
                     String::from_utf8_lossy(&message.data),
-                    peer_id
+                    peer_id,
                 ),
                 SwarmEvent::NewListenAddr { address, .. } => {
                     println!("Listening on {:?}", address);
