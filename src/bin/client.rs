@@ -19,9 +19,10 @@
 // DEALINGS IN THE SOFTWARE.
 
 use clap::Parser;
-use futures::executor::block_on;
-use futures::future::FutureExt;
-use futures::stream::StreamExt;
+use async_std::io;
+use async_std::task::block_on;
+use futures::{prelude::*, select};
+use instant::Duration;
 use libp2p::core::multiaddr::{Multiaddr, Protocol};
 use libp2p::core::transport::OrTransport;
 use libp2p::core::upgrade;
@@ -34,11 +35,16 @@ use libp2p::relay::v2::client::{self, Client};
 use libp2p::swarm::{SwarmBuilder, SwarmEvent};
 use libp2p::tcp::{GenTcpConfig, TcpTransport};
 use libp2p::Transport;
+use libp2p::gossipsub::{
+    self, GossipsubEvent, MessageId, GossipsubMessage, IdentTopic as Topic, MessageAuthenticity, ValidationMode,
+};
 use libp2p::yamux;
 use libp2p::{identity, NetworkBehaviour, PeerId};
 use log::info;
+use std::collections::hash_map::DefaultHasher;
 use std::convert::TryInto;
 use std::error::Error;
+use std::hash::{Hash, Hasher};
 use std::net::Ipv4Addr;
 use std::str::FromStr;
 
@@ -79,7 +85,8 @@ impl FromStr for Mode {
     }
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
+#[async_std::main]
+async fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
 
     let opts = Opts::parse();
@@ -106,6 +113,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     .multiplex(yamux::YamuxConfig::default())
     .boxed();
 
+    let topic = Topic::new("abc");
+
     #[derive(NetworkBehaviour)]
     #[behaviour(out_event = "Event", event_process = false)]
     struct Behaviour {
@@ -113,6 +122,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         ping: Ping,
         identify: Identify,
         dcutr: dcutr::behaviour::Behaviour,
+        gossip: gossipsub::Gossipsub,
     }
 
     #[derive(Debug)]
@@ -121,6 +131,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         Identify(IdentifyEvent),
         Relay(client::Event),
         Dcutr(dcutr::behaviour::Event),
+        Gossip(GossipsubEvent)
     }
 
     impl From<PingEvent> for Event {
@@ -146,20 +157,46 @@ fn main() -> Result<(), Box<dyn Error>> {
             Event::Dcutr(e)
         }
     }
+    impl From<GossipsubEvent> for Event {
+        fn from(e: GossipsubEvent) -> Self {
+            Event::Gossip(e) 
+        }
+    }
 
-    let behaviour = Behaviour {
-        relay_client: client,
-        ping: Ping::new(PingConfig::new()),
-        identify: Identify::new(IdentifyConfig::new(
-            "/TODO/0.0.1".to_string(),
-            local_key.public(),
-        )),
-        dcutr: dcutr::behaviour::Behaviour::new(),
-    };
 
-    let mut swarm = SwarmBuilder::new(transport, behaviour, local_peer_id)
+    let mut swarm = {
+        // use the hash of message as id to conetnt-address
+        let message_id_fn = | message: &GossipsubMessage | {
+            let mut s = DefaultHasher::new();
+            message.data.hash(&mut s);
+            MessageId::from(s.finish().to_string())
+        };
+        // set a custom gossipsub
+        let gossipsub_config = gossipsub::GossipsubConfigBuilder::default()
+            .heartbeat_interval(Duration::from_secs(10)) // This is set to aid debugging by not cluttering the log space
+            .validation_mode(ValidationMode::Strict) // set the message validation. Enforce message validation
+            .message_id_fn(message_id_fn) // content-address. not to propagate same content messages
+            .build()
+            .expect("Valid config");
+        let mut gossip = gossipsub::Gossipsub::new(MessageAuthenticity::Signed(local_key.clone()), gossipsub_config)
+            .expect("configuration error");
+
+        gossip.subscribe(&topic).unwrap();
+
+        let behaviour = Behaviour {
+            relay_client: client,
+            ping: Ping::new(PingConfig::new()),
+            identify: Identify::new(IdentifyConfig::new(
+                "/TODO/0.0.1".to_string(),
+                local_key.public(),
+            )),
+            dcutr: dcutr::behaviour::Behaviour::new(),
+            gossip,
+        };
+        SwarmBuilder::new(transport, behaviour, local_peer_id)
         .dial_concurrency_factor(10_u8.try_into().unwrap())
-        .build();
+        .build()
+    };
 
     swarm
         .listen_on(
@@ -202,6 +239,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 SwarmEvent::NewListenAddr { .. } => {}
                 SwarmEvent::Dialing { .. } => {}
                 SwarmEvent::ConnectionEstablished { .. } => {}
+                SwarmEvent::Behaviour(Event::Gossip(event)) => {println!("{:?}", event);}
                 SwarmEvent::Behaviour(Event::Ping(_)) => {}
                 SwarmEvent::Behaviour(Event::Identify(IdentifyEvent::Sent { .. })) => {
                     info!("Told relay its public address.");
@@ -241,6 +279,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     block_on(async {
+        let mut established = false;
         loop {
             match swarm.next().await.unwrap() {
                 SwarmEvent::NewListenAddr { address, .. } => {
@@ -266,14 +305,50 @@ fn main() -> Result<(), Box<dyn Error>> {
                     peer_id, endpoint, ..
                 } => {
                     info!("Established connection to {:?} via {:?}", peer_id, endpoint);
+                    established = true;
                 }
                 SwarmEvent::OutgoingConnectionError { peer_id, error } => {
                     info!("Outgoing connection error to {:?}: {:?}", peer_id, error);
                 }
                 _ => {}
             }
+
+            if established {
+                break;
+            } 
         }
-    })
+    });
+
+    let mut stdin = io::BufReader::new(io::stdin()).lines().fuse();
+    loop {
+        select! {
+            line = stdin.select_next_some() => {
+                if let Err(e) = swarm
+                    .behaviour_mut()
+                    .gossip
+                    .publish(topic.clone(), line.expect("Stdin not to close").as_bytes())
+                {
+                    println!("Publish error: {:?}", e);
+                }
+            },
+            event = swarm.select_next_some() => match event {
+                SwarmEvent::Behaviour(Event::Gossip(GossipsubEvent::Message{
+                    propagation_source: peer_id,
+                    message_id: id,
+                    message,
+                })) => println!(
+                    "Got message: {} with id: {} from peer: {:?}",
+                    String::from_utf8_lossy(&message.data),
+                    id,
+                    peer_id
+                ),
+                SwarmEvent::NewListenAddr { address, .. } => {
+                    println!("Listening on {:?}", address);
+                }
+                _ => {}
+            }
+        }
+    }
 }
 
 fn generate_ed25519(secret_key_seed: u8) -> identity::Keypair {
