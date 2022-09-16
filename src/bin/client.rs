@@ -27,6 +27,7 @@ use libp2p::core::multiaddr::{Multiaddr, Protocol};
 use libp2p::core::transport::OrTransport;
 use libp2p::core::upgrade;
 use libp2p::dcutr;
+use libp2p::dcutr::behaviour::Event::DirectConnectionUpgradeSucceeded;
 use libp2p::dns::DnsConfig;
 use libp2p::identify::{Identify, IdentifyConfig, IdentifyEvent, IdentifyInfo};
 use libp2p::noise;
@@ -47,6 +48,8 @@ use std::error::Error;
 use std::hash::{Hash, Hasher};
 use std::net::Ipv4Addr;
 use std::str::FromStr;
+use colorful::Colorful;
+use colorful::Color;
 
 #[derive(Debug, Parser)]
 #[clap(name = "libp2p DCUtR client")]
@@ -295,8 +298,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     info!("{:?}", event)
                 }
                 SwarmEvent::Behaviour(Event::Dcutr(event)) => {
+                    if let DirectConnectionUpgradeSucceeded { remote_peer_id: _ } = event {
+                        established = true;
+                    }
                     info!("{:?}", event);
-                    established = true;
                 }
                 SwarmEvent::Behaviour(Event::Identify(event)) => {
                     info!("{:?}", event)
@@ -337,8 +342,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     message_id: _,
                     message,
                 })) => println!(
-                    "\033[35m{}\033[0m from peer: {:?}",
-                    String::from_utf8_lossy(&message.data),
+                    "{} from: {:?}",
+                    String::from_utf8_lossy(&message.data).color(Color::LightMagenta),
                     peer_id,
                 ),
                 SwarmEvent::NewListenAddr { address, .. } => {

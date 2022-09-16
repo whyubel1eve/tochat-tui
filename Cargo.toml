@@ -29,3 +29,4 @@ thiserror = "1.0"
 libp2p = { version = "0.48", default-features = false, features = ["kad", "yamux", "plaintext", "identify", "relay", "ping", "noise", "plaintext", "tcp-async-io", "dcutr", "dns-async-std", "gossipsub"] }
 quickcheck = "1"
 clap = {version = "3.1.6", features = ["derive"]}
+colorful = "0.2.1"
