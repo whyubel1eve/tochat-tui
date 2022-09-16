@@ -293,7 +293,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     info!("{:?}", event)
                 }
                 SwarmEvent::Behaviour(Event::Dcutr(event)) => {
-                    info!("{:?}", event)
+                    info!("{:?}", event);
+                    established = true
                 }
                 SwarmEvent::Behaviour(Event::Identify(event)) => {
                     info!("{:?}", event)
@@ -303,7 +304,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     peer_id, endpoint, ..
                 } => {
                     info!("Established connection to {:?} via {:?}", peer_id, endpoint);
-                    established = true;
                 }
                 SwarmEvent::OutgoingConnectionError { peer_id, error } => {
                     info!("Outgoing connection error to {:?}: {:?}", peer_id, error);
