@@ -289,40 +289,40 @@ async fn main() -> Result<(), Box<dyn Error>> {
         let mut established = false;
         loop {
             match swarm.next().await.unwrap() {
-                SwarmEvent::NewListenAddr { address, .. } => {
-                    info!("Listening on {:?}", address);
-                }
-                SwarmEvent::Behaviour(Event::Relay(client::Event::ReservationReqAccepted {
-                    ..
-                })) => {
-                    assert!(opts.mode == Mode::Listen);
-                    info!("Relay accepted our reservation request.");
-                }
-                SwarmEvent::Behaviour(Event::Relay(event)) => {
-                    info!("{:?}", event)
-                }
-                SwarmEvent::Behaviour(Event::Dcutr(event)) => {
-                    info!("{:?}", event);
-                    established = true;
-                }
-                SwarmEvent::Behaviour(Event::Identify(event)) => {
-                    info!("{:?}", event)
-                }
-                SwarmEvent::Behaviour(Event::Ping(_)) => {}
-                SwarmEvent::ConnectionEstablished {
-                    peer_id, endpoint, ..
-                } => {
-                    info!("Established connection to {:?} via {:?}", peer_id, endpoint);
-                }
-                SwarmEvent::OutgoingConnectionError { peer_id, error } => {
-                    info!("Outgoing connection error to {:?}: {:?}", peer_id, error);
-                }
-                _ => {}
+            SwarmEvent::NewListenAddr { address, .. } => {
+                info!("Listening on {:?}", address);
+            }
+            SwarmEvent::Behaviour(Event::Relay(client::Event::ReservationReqAccepted {
+                ..
+            })) => {
+                assert!(opts.mode == Mode::Listen);
+                info!("Relay accepted our reservation request.");
+            }
+            SwarmEvent::Behaviour(Event::Relay(event)) => {
+                info!("{:?}", event)
+            }
+            SwarmEvent::Behaviour(Event::Dcutr(event)) => {
+                info!("{:?}", event);
+                established = true;
+            }
+            SwarmEvent::Behaviour(Event::Identify(event)) => {
+                info!("{:?}", event)
+            }
+            SwarmEvent::Behaviour(Event::Ping(_)) => {}
+            SwarmEvent::ConnectionEstablished {
+                peer_id, endpoint, ..
+            } => {
+                info!("Established connection to {:?} via {:?}", peer_id, endpoint);
+            }
+            SwarmEvent::OutgoingConnectionError { peer_id, error } => {
+                info!("Outgoing connection error to {:?}: {:?}", peer_id, error);
+            }
+            _ => {}
             }
 
             if established {
                 break;
-            } 
+            }
         }
     });
 
@@ -333,7 +333,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 if let Err(e) = swarm
                     .behaviour_mut()
                     .gossip
-                    .publish(topic.clone(), line.expect("Stdin not to close").as_bytes())
+                    .publish(topic.clone(), format!("{},{}", line.expect("Stdin not to close"), opts.name.clone())
+                        .as_bytes())
                 {
                     println!("Publish error: {:?}", e);
                 }
@@ -343,12 +344,19 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     propagation_source: _,
                     message_id: _,
                     message,
-                })) => println!(
+                })) => {
+                    let message = String::from_utf8_lossy(&message.data);
+                    let tokens:Vec<&str> = message.split(",").collect();
+                    let content = tokens[0];
+                    let name = tokens[1];
+                         
+                  println!(
                     "{} from: {}",
-                    String::from_utf8_lossy(&message.data).color(Color::LightYellow3),
-                    format!("{} {}", opts.name.clone(), Local::now().format("%a %Y-%m-%d %H:%M:%S").to_string())
+                    content.color(Color::LightYellow3),
+                    format!("{}  {}", name, Local::now().format("%a %Y-%m-%d %H:%M:%S").to_string())
                         .color(Color::LightCyan1),
-                ),
+                    )
+                }, 
                 _ => {}
             }
         }
