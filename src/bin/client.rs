@@ -27,7 +27,6 @@ use libp2p::core::multiaddr::{Multiaddr, Protocol};
 use libp2p::core::transport::OrTransport;
 use libp2p::core::upgrade;
 use libp2p::dcutr;
-use libp2p::dcutr::behaviour::Event::DirectConnectionUpgradeSucceeded;
 use libp2p::dns::DnsConfig;
 use libp2p::identify::{Identify, IdentifyConfig, IdentifyEvent, IdentifyInfo};
 use libp2p::noise;
@@ -298,10 +297,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     info!("{:?}", event)
                 }
                 SwarmEvent::Behaviour(Event::Dcutr(event)) => {
-                    if let DirectConnectionUpgradeSucceeded { remote_peer_id: _ } = event {
-                        established = true;
-                    }
                     info!("{:?}", event);
+                            established = true;
                 }
                 SwarmEvent::Behaviour(Event::Identify(event)) => {
                     info!("{:?}", event)
