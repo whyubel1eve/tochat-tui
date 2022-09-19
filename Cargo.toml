@@ -31,3 +31,5 @@ quickcheck = "1"
 clap = {version = "3.1.6", features = ["derive"]}
 colorful = "0.2.1"
 chrono = "0.4"
+web3 = "0.17.0"
+secp256k1 = { version = "0.24.0", features = ["rand-std"]}
