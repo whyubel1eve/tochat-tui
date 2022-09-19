@@ -374,10 +374,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
                             let name = tokens[1];
                                  
                           println!(
-                            "{} from: {}",
-                            content.color(Color::LightYellow),
-                            format!("{}  {}", name, Local::now().format("%a %Y-%m-%d %H:%M:%S").to_string())
+                            "{} :   {}",
+                            format!("{}  {}", name, Local::now().format("%H:%M:%S").to_string())
                                 .color(Color::LightCyan),
+                            content.color(Color::LightYellow),
                             )
                         }, 
                         _ => {}
