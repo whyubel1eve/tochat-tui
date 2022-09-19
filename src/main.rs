@@ -371,14 +371,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
                             let message = String::from_utf8_lossy(&message.data);
                             let tokens:Vec<&str> = message.split(",").collect();
                             let content = tokens[0];
-                            let name = tokens[1];
+                            let remote_name = tokens[1];
                                  
-                          println!(
-                            "{} :   {}",
-                            format!("{}  {}", name, Local::now().format("%H:%M:%S").to_string())
+                            println!(
+                            "{} : {}",
+                            format!("{}  {}", remote_name, Local::now().format("%H:%M:%S").to_string())
                                 .color(Color::LightCyan),
                             content.color(Color::LightYellow),
-                            )
+                            );
+                            print!("{}  {} : ", name, Local::now().format("%H:%M:%S").to_string()
+                                .color(Color::LightCyan))
                         }, 
                         _ => {}
                     }
