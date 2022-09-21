@@ -301,7 +301,7 @@ pub async fn handle_msg(mut swarm: Swarm<Behaviour>, mut rx1: Receiver<String>, 
                         let content = tokens[0];
                         let remote_name = tokens[1];
 
-                        tx2.send(format!("{}, {}\r\n{}", 
+                        tx2.send(format!("{} {}:  {}", 
                                     remote_name, 
                                     Local::now().format("%H:%M:%S").to_string(), 
                                     content)).await.unwrap();

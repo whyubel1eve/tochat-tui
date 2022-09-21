@@ -53,7 +53,7 @@ pub async fn run_app<B: Backend>(
                 InputMode::Editing => match key.code {
                     KeyCode::Enter => {
                         tx1.send(format!("{},{}",  (*lock).input.clone(), name)).await.unwrap();
-                        let s = format!("{}, {}\r\n{}", 
+                        let s = format!("{} {}:  {}", 
                             *name, 
                             Local::now().format("%H:%M:%S").to_string(), 
                             (*lock).input.drain(..).collect::<String>());

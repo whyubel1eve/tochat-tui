@@ -54,8 +54,8 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, app: &App) {
         .messages
         .iter()
         .enumerate()
-        .map(|(i, m)| {
-            let content = vec![Spans::from(Span::raw(format!("{}: {}", i, m)))];
+        .map(|(_, m)| {
+            let content = vec![Spans::from(Span::raw(format!("{}", m)))];
             ListItem::new(content)
         })
         .collect();
