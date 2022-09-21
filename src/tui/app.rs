@@ -28,11 +28,11 @@ pub async fn run_app<B: Backend>(
 
     tokio::spawn(async move {
         loop {
-            let msg = rx2.recv().await.unwrap();
-            let mut lock = app_clone.lock().unwrap();
-            (*lock).messages.push(msg);
+            while let Some(msg) = rx2.recv().await {
+                let mut lock = app_clone.lock().unwrap();
+                (*lock).messages.push(msg);
+            }
         }
-
     });
 
     loop {
