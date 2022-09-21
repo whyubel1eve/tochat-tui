@@ -25,21 +25,25 @@ pub async fn run_app<B: Backend>(
     let app = Arc::new(Mutex::new(app));
     let app_clone = app.clone();
 
+
     tokio::spawn(async move {
         loop {
             let msg = rx2.recv().await.unwrap();
-            app_clone.lock().unwrap().messages.push(msg);
+            let mut lock = app_clone.lock().unwrap();
+            (*lock).messages.push(msg);
         }
+
     });
 
     loop {
         terminal.draw(|f| ui(f, &app.lock().unwrap()))?;
 
         if let Event::Key(key) = event::read()? {
-            match app.lock().unwrap().input_mode {
+            let mut lock = app.lock().unwrap();
+            match (*lock).input_mode {
                 InputMode::Normal => match key.code {
                     KeyCode::Char('i') => {
-                        app.lock().unwrap().input_mode = InputMode::Editing;
+                        (*lock).input_mode = InputMode::Editing;
                     }
                     KeyCode::Char('q') => {
                         return Ok(());
@@ -48,20 +52,21 @@ pub async fn run_app<B: Backend>(
                 },
                 InputMode::Editing => match key.code {
                     KeyCode::Enter => {
-                        tx1.send(format!("{},{}", app.lock().unwrap().input.clone(), name)).await.unwrap();
-                        app.lock().unwrap().messages.push(format!("{}, {}\r\n{}", 
+                        tx1.send(format!("{},{}",  (*lock).input.clone(), name)).await.unwrap();
+                        let s = format!("{}, {}\r\n{}", 
                             *name, 
                             Local::now().format("%H:%M:%S").to_string(), 
-                            app.lock().unwrap().input.drain(..).collect::<String>()));
+                            (*lock).input.drain(..).collect::<String>());
+                        (*lock).messages.push(s);
                     }
                     KeyCode::Char(c) => {
-                        app.lock().unwrap().input.push(c);
+                        (*lock).input.push(c);
                     }
                     KeyCode::Backspace => {
-                        app.lock().unwrap().input.pop();
+                        (*lock).input.pop();
                     }
                     KeyCode::Esc => {
-                        app.lock().unwrap().input_mode = InputMode::Normal;
+                        (*lock).input_mode = InputMode::Normal;
                     }
                     _ => {}
                 },
