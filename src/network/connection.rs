@@ -278,15 +278,17 @@ pub async fn establish_connection(
    
 }
 
-pub async fn receive(mut swarm: Swarm<Behaviour>, mut rx1: Receiver<String>, tx2: Sender<String>) {
+pub async fn handle_msg(mut swarm: Swarm<Behaviour>, mut rx1: Receiver<String>, tx2: Sender<String>) {
     loop {
-        let msg = rx1.recv().await.unwrap();
-        swarm.behaviour_mut()
-            .gossip
-            .publish(Topic::new("abc"), msg.as_bytes())
-            .expect("publish error");
-        
         tokio::select! {
+            // receive
+            msg = rx1.recv() => {
+                swarm.behaviour_mut()
+            .gossip
+            .publish(Topic::new("abc"), msg.unwrap().as_bytes())
+            .expect("publish error");
+            },
+            // publish
             event = swarm.select_next_some() => {
                 match event {
                     SwarmEvent::Behaviour(Event::Gossip(GossipsubEvent::Message{

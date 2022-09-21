@@ -85,7 +85,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let (tx2, rx2) = mpsc::channel::<String>(32);
 
             let swarm = network::connection::establish_connection(mode, key, relay_address, remote_id).await;
-            tokio::spawn(network::connection::receive(swarm, rx1, tx2));
+            tokio::spawn(network::connection::handle_msg(swarm, rx1, tx2));
             tui::bootstrap(tx1, rx2, name).await.unwrap();
             Ok(())
         }
