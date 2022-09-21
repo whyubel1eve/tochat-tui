@@ -268,14 +268,14 @@ pub async fn handle_msg(
 ) {
     loop {
         tokio::select! {
-            // receive
+            // publish
             msg = rx1.recv() => {
                 swarm.behaviour_mut()
             .gossip
             .publish(Topic::new("abc"), msg.unwrap().as_bytes())
             .expect("publish error");
             },
-            // publish
+            // receive
             event = swarm.select_next_some() => {
                 match event {
                     SwarmEvent::Behaviour(Event::Gossip(GossipsubEvent::Message{
