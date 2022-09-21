@@ -1,7 +1,8 @@
 use crossterm::{
-    event::{self, Event, KeyCode},
+    event::{self, Event, KeyCode, poll},
 };
 
+use instant::Duration;
 use tokio::sync::mpsc::{Sender, Receiver};
 use std::{io, sync::{Arc, Mutex}};
 use tui::{
@@ -37,40 +38,41 @@ pub async fn run_app<B: Backend>(
 
     loop {
         terminal.draw(|f| ui(f, &app.lock().unwrap()))?;
-
-        if let Event::Key(key) = event::read()? {
-            let mut lock = app.lock().unwrap();
-            match (*lock).input_mode {
-                InputMode::Normal => match key.code {
-                    KeyCode::Char('i') => {
-                        (*lock).input_mode = InputMode::Editing;
-                    }
-                    KeyCode::Char('q') => {
-                        return Ok(());
-                    }
-                    _ => {}
-                },
-                InputMode::Editing => match key.code {
-                    KeyCode::Enter => {
-                        tx1.send(format!("{},{}",  (*lock).input.clone(), name)).await.unwrap();
-                        let s = format!("{} {}:  {}", 
-                            *name, 
-                            Local::now().format("%H:%M:%S").to_string(), 
-                            (*lock).input.drain(..).collect::<String>());
-                        (*lock).messages.push(s);
-                    }
-                    KeyCode::Char(c) => {
-                        (*lock).input.push(c);
-                    }
-                    KeyCode::Backspace => {
-                        (*lock).input.pop();
-                    }
-                    KeyCode::Esc => {
-                        (*lock).input_mode = InputMode::Normal;
-                    }
-                    _ => {}
-                },
+        if poll(Duration::from_millis(50))? {
+            if let Event::Key(key) = event::read()? {
+                let mut lock = app.lock().unwrap();
+                match (*lock).input_mode {
+                    InputMode::Normal => match key.code {
+                        KeyCode::Char('i') => {
+                            (*lock).input_mode = InputMode::Editing;
+                        }
+                        KeyCode::Char('q') => {
+                            return Ok(());
+                        }
+                        _ => {}
+                    },
+                    InputMode::Editing => match key.code {
+                        KeyCode::Enter => {
+                            tx1.send(format!("{},{}",  (*lock).input.clone(), name)).await.unwrap();
+                            let s = format!("{} {}:  {}", 
+                                *name, 
+                                Local::now().format("%H:%M:%S").to_string(), 
+                                (*lock).input.drain(..).collect::<String>());
+                            (*lock).messages.push(s);
+                        }
+                        KeyCode::Char(c) => {
+                            (*lock).input.push(c);
+                        }
+                        KeyCode::Backspace => {
+                            (*lock).input.pop();
+                        }
+                        KeyCode::Esc => {
+                            (*lock).input_mode = InputMode::Normal;
+                        }
+                        _ => {}
+                    },
+                }
             }
-        }
+        } 
     }
 }
