@@ -4,17 +4,13 @@ use chrono::prelude::*;
 
 use futures::executor::block_on;
 use futures::prelude::*;
-use instant::Duration;
 
 use libp2p::core::multiaddr::{Multiaddr, Protocol};
 use libp2p::core::transport::OrTransport;
 use libp2p::core::upgrade;
-use libp2p::{dcutr, Swarm};
 use libp2p::dns::DnsConfig;
 use libp2p::gossipsub::{
-    self, GossipsubEvent, GossipsubMessage, IdentTopic as Topic, MessageAuthenticity, MessageId,
-    ValidationMode,
-};
+    self, GossipsubEvent, IdentTopic as Topic, MessageAuthenticity};
 use libp2p::identify::{Identify, IdentifyConfig, IdentifyEvent, IdentifyInfo};
 use libp2p::noise;
 use libp2p::ping::{Ping, PingConfig, PingEvent};
@@ -23,14 +19,13 @@ use libp2p::swarm::{SwarmBuilder, SwarmEvent};
 use libp2p::tcp::{GenTcpConfig, TcpTransport};
 use libp2p::yamux;
 use libp2p::Transport;
+use libp2p::{dcutr, Swarm};
 use libp2p::{NetworkBehaviour, PeerId};
 
 use log::info;
-use tokio::sync::mpsc::{Receiver, Sender};
-use std::collections::hash_map::DefaultHasher;
 use std::convert::TryInto;
-use std::hash::{Hash, Hasher};
 use std::net::Ipv4Addr;
+use tokio::sync::mpsc::{Receiver, Sender};
 
 #[derive(NetworkBehaviour)]
 #[behaviour(out_event = "Event", event_process = false)]
@@ -80,7 +75,6 @@ impl From<GossipsubEvent> for Event {
     }
 }
 
-
 pub async fn establish_connection(
     mode: &Mode,
     key: &String,
@@ -114,17 +108,8 @@ pub async fn establish_connection(
 
     // build swamr
     let mut swarm = {
-        // use the hash of message as id to conetnt-address
-        let message_id_fn = |message: &GossipsubMessage| {
-            let mut s = DefaultHasher::new();
-            message.data.hash(&mut s);
-            MessageId::from(s.finish().to_string())
-        };
         // set a custom gossipsub
         let gossipsub_config = gossipsub::GossipsubConfigBuilder::default()
-            .heartbeat_interval(Duration::from_secs(10)) // This is set to aid debugging by not cluttering the log space
-            .validation_mode(ValidationMode::Strict) // set the message validation. Enforce message validation
-            .message_id_fn(message_id_fn) // content-address. not to propagate same content messages
             .build()
             .expect("Valid config");
         let mut gossip = gossipsub::Gossipsub::new(
@@ -274,11 +259,13 @@ pub async fn establish_connection(
         }
     });
     swarm
-
-   
 }
 
-pub async fn handle_msg(mut swarm: Swarm<Behaviour>, mut rx1: Receiver<String>, tx2: Sender<String>) {
+pub async fn handle_msg(
+    mut swarm: Swarm<Behaviour>,
+    mut rx1: Receiver<String>,
+    tx2: Sender<String>,
+) {
     loop {
         tokio::select! {
             // receive
@@ -301,15 +288,14 @@ pub async fn handle_msg(mut swarm: Swarm<Behaviour>, mut rx1: Receiver<String>, 
                         let content = tokens[0];
                         let remote_name = tokens[1];
 
-                        tx2.send(format!("{} {}:  {}", 
-                                    remote_name, 
-                                    Local::now().format("%H:%M:%S").to_string(), 
+                        tx2.send(format!("{} {}:  {}",
+                                    remote_name,
+                                    Local::now().format("%H:%M:%S").to_string(),
                                     content)).await.unwrap();
                     }
                     _ => {}
                 }
             }
         }
-        
     }
 }

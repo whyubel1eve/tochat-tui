@@ -23,6 +23,7 @@ pub async fn run_app<B: Backend>(
     name: &String
 ) -> io::Result<()> {
 
+    // crossed thread data
     let app = Arc::new(Mutex::new(app));
     let app_clone = app.clone();
 
@@ -38,6 +39,8 @@ pub async fn run_app<B: Backend>(
 
     loop {
         terminal.draw(|f| ui(f, &app.lock().unwrap()))?;
+        
+        // flush every 50 millis, avoid blocking
         if poll(Duration::from_millis(50))? {
             if let Event::Key(key) = event::read()? {
                 let mut lock = app.lock().unwrap();
