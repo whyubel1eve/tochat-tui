@@ -1,8 +1,8 @@
 use crate::network::secure::generate_ed25519;
 use crate::Mode;
+use chrono::prelude::*;
 
-use async_std::task::block_on;
-
+use futures::executor::block_on;
 use futures::prelude::*;
 use instant::Duration;
 
@@ -26,6 +26,7 @@ use libp2p::Transport;
 use libp2p::{NetworkBehaviour, PeerId};
 
 use log::info;
+use tokio::sync::mpsc::{Receiver, Sender};
 use std::collections::hash_map::DefaultHasher;
 use std::convert::TryInto;
 use std::hash::{Hash, Hasher};
@@ -80,12 +81,12 @@ impl From<GossipsubEvent> for Event {
 }
 
 
-pub fn establish_connection(
+pub async fn establish_connection(
     mode: &Mode,
     key: &String,
     relay_address: &Multiaddr,
     remote_id: &Option<PeerId>,
-) -> (Swarm<Behaviour>, Topic) {
+) -> Swarm<Behaviour> {
     let local_key = generate_ed25519(key);
 
     let local_peer_id = PeerId::from(local_key.public());
@@ -272,6 +273,41 @@ pub fn establish_connection(
             }
         }
     });
+    swarm
 
-    (swarm, topic)
+   
+}
+
+pub async fn receive(mut swarm: Swarm<Behaviour>, mut rx1: Receiver<String>, tx2: Sender<String>) {
+    loop {
+        let msg = rx1.recv().await.unwrap();
+        swarm.behaviour_mut()
+            .gossip
+            .publish(Topic::new("abc"), msg.as_bytes())
+            .expect("publish error");
+        
+        tokio::select! {
+            event = swarm.select_next_some() => {
+                match event {
+                    SwarmEvent::Behaviour(Event::Gossip(GossipsubEvent::Message{
+                        propagation_source: _,
+                        message_id: _,
+                        message,
+                    })) => {
+                        let message = String::from_utf8_lossy(&message.data);
+                        let tokens:Vec<&str> = message.split(",").collect();
+                        let content = tokens[0];
+                        let remote_name = tokens[1];
+
+                        tx2.send(format!("{}, {}\r\n{}", 
+                                    remote_name, 
+                                    Local::now().format("%H:%M:%S").to_string(), 
+                                    content)).await.unwrap();
+                    }
+                    _ => {}
+                }
+            }
+        }
+        
+    }
 }

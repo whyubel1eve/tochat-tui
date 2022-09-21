@@ -6,16 +6,13 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use libp2p::Swarm;
+use tokio::sync::mpsc::{Sender, Receiver};
 use std::{io, error::Error};
 use tui::{
     backend::CrosstermBackend,
 
     Terminal,
 };
-
-use crate::network::connection::Behaviour;
-use libp2p::gossipsub::IdentTopic as Topic;
 
 pub enum InputMode {
     Normal,
@@ -45,7 +42,7 @@ impl Default for App {
     }
 }
 
-pub fn bootstrap(swarm: Swarm<Behaviour>, topic: Topic, name: &String) -> Result<(), Box<dyn Error>> {
+pub async fn bootstrap(tx1: Sender<String>, rx2: Receiver<String>, name: &String) -> Result<(), Box<dyn Error>> {
     // setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -55,7 +52,7 @@ pub fn bootstrap(swarm: Swarm<Behaviour>, topic: Topic, name: &String) -> Result
 
     // create app and run it
     let app = App::default();
-    let res = app::run_app(&mut terminal, app, swarm, topic, name);
+    let res = app::run_app(&mut terminal, app, tx1, rx2, name).await;
 
     // restore terminal
     disable_raw_mode()?;

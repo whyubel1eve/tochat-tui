@@ -10,6 +10,7 @@ use libp2p::PeerId;
 use std::error::Error;
 
 use std::str::FromStr;
+use tokio::sync::mpsc;
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
@@ -64,7 +65,7 @@ impl FromStr for Mode {
     }
 }
 
-#[async_std::main]
+#[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
 
@@ -78,9 +79,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
             name,
             relay_address,
             remote_id,
-        } => {
-            let (swarm, topic) = network::connection::establish_connection(mode, key, relay_address, remote_id);
-            tui::bootstrap(swarm, topic, name)
+        } => {  
+            
+            let (tx1, rx1) = mpsc::channel::<String>(32);
+            let (tx2, rx2) = mpsc::channel::<String>(32);
+
+            let swarm = network::connection::establish_connection(mode, key, relay_address, remote_id).await;
+            tokio::spawn(network::connection::receive(swarm, rx1, tx2));
+            tui::bootstrap(tx1, rx2, name).await.unwrap();
+            Ok(())
         }
     }
 }
