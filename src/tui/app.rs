@@ -69,6 +69,8 @@ pub async fn run_app<B: Backend>(
                                 Local::now().format("%H:%M:%S").to_string(), 
                                 (*lock).input.drain(..).collect::<String>());
                             (*lock).messages.items.push(s);
+                            let len = (*lock).messages.items.len() - 1;
+                            (*lock).messages.state.select(Some(len));
                         }
                         KeyCode::Char(c) => {
                             (*lock).input.push(c);
