@@ -11,12 +11,66 @@ use std::{io, error::Error};
 use tui::{
     backend::CrosstermBackend,
 
-    Terminal,
+    Terminal, widgets::ListState,
 };
 
 pub enum InputMode {
     Normal,
     Editing,
+}
+
+pub struct StatefulList<T> {
+    pub state: ListState,
+    pub items: Vec<T>,
+}
+
+impl<T> StatefulList<T> {
+    fn with_items(items: Vec<T>) -> StatefulList<T> {
+        StatefulList {
+            state: ListState::default(),
+            items,
+        }
+    }
+
+    fn next(&mut self) {
+        let i = match self.state.selected() {
+            Some(i) => {
+                if i >= self.items.len() - 1 {
+                    i
+                } else {
+                    i + 1
+                }
+            }
+            None => 0,
+        };
+        self.state.select(Some(i));
+    }
+
+    fn previous(&mut self) {
+        let i = match self.state.selected() {
+            Some(i) => {
+                if i == 0 {
+                    i
+                } else {
+                    i - 1
+                }
+            }
+            None => 0,
+        };
+        self.state.select(Some(i));
+    }
+
+    fn home(&mut self) {
+        self.state.select(Some(0));
+    }
+
+    fn end(&mut self) {
+        self.state.select(Some(self.items.len() - 1));
+    }
+
+    fn unselect(&mut self) {
+        self.state.select(None);
+    }
 }
 
 /// App holds the state of the application
@@ -26,7 +80,7 @@ pub struct App {
     /// Current input mode
     pub input_mode: InputMode,
     /// History of recorded messages
-    pub messages: Vec<String>,
+    pub messages: StatefulList<String>,
     /// History of recorded messages
     pub remote_messages: String,
 }
@@ -36,7 +90,7 @@ impl Default for App {
         App {
             input: String::new(),
             input_mode: InputMode::Normal,
-            messages: Vec::new(),
+            messages: StatefulList::with_items(Vec::new()),
             remote_messages: String::new(),
         }
     }

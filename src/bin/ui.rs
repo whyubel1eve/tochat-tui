@@ -153,7 +153,7 @@ fn run_app<B: Backend>(
                     },
                     InputMode::Editing => match key.code {
                         KeyCode::Enter => {
-                            let s = format!("{} {}",
+                            let s = format!("{}- {}",
                                 Local::now().format("%H:%M:%S").to_string(), 
                                 app.input.drain(..).collect::<String>());
                             app.messages.items.push(s);
@@ -222,7 +222,11 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
         .iter()
         .enumerate()
         .map(|(_, m)| {
-            let content = vec![Spans::from(Span::styled(format!("{}", m), Style::default().fg(Color::LightCyan)))];
+            let c: Vec<_> = m.split("-").collect();
+            let content = vec![
+                Spans::from(Span::styled(c[0], Style::default().fg(Color::White)), ),
+                Spans::from(Span::styled(c[1], Style::default().fg(Color::LightYellow))),
+            ];
             ListItem::new(content)
         })
         .collect();

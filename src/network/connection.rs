@@ -288,7 +288,7 @@ pub async fn handle_msg(
                         let content = tokens[0];
                         let remote_name = tokens[1];
 
-                        tx2.send(format!("{} {}:  {}",
+                        tx2.send(format!("{} {} - {}",
                                     remote_name,
                                     Local::now().format("%H:%M:%S").to_string(),
                                     content)).await.unwrap();

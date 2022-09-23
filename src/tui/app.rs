@@ -32,13 +32,13 @@ pub async fn run_app<B: Backend>(
         loop {
             while let Some(msg) = rx2.recv().await {
                 let mut lock = app_clone.lock().unwrap();
-                (*lock).messages.push(msg);
+                (*lock).messages.items.push(msg);
             }
         }
     });
 
     loop {
-        terminal.draw(|f| ui(f, &app.lock().unwrap()))?;
+        terminal.draw(|f| ui(f, &mut app.lock().unwrap()))?;
         
         // flush every 50 millis, avoid blocking
         if poll(Duration::from_millis(50))? {
@@ -52,16 +52,23 @@ pub async fn run_app<B: Backend>(
                         KeyCode::Char('q') => {
                             return Ok(());
                         }
+                        KeyCode::Left => (*lock).messages.unselect(),
+                        KeyCode::Down => (*lock).messages.next(),
+                        KeyCode::Up => (*lock).messages.previous(),
+                        KeyCode::Char('j') => (*lock).messages.next(),
+                        KeyCode::Char('k') => (*lock).messages.previous(),
+                        KeyCode::Home => (*lock).messages.home(),
+                        KeyCode::End => (*lock).messages.end(),
                         _ => {}
                     },
                     InputMode::Editing => match key.code {
                         KeyCode::Enter => {
                             tx1.send(format!("{},{}",  (*lock).input.clone(), name)).await.unwrap();
-                            let s = format!("{} {}:  {}", 
+                            let s = format!("{} {} - {}", 
                                 *name, 
                                 Local::now().format("%H:%M:%S").to_string(), 
                                 (*lock).input.drain(..).collect::<String>());
-                            (*lock).messages.push(s);
+                            (*lock).messages.items.push(s);
                         }
                         KeyCode::Char(c) => {
                             (*lock).input.push(c);

@@ -10,7 +10,7 @@ use tui::{
 use super::{InputMode, App};
 
 
-pub fn ui<B: Backend>(f: &mut Frame<B>, app: &App) {
+pub fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .margin(2)
@@ -52,16 +52,21 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, app: &App) {
     // messages display area
     let messages: Vec<ListItem> = app
         .messages
+        .items
         .iter()
         .enumerate()
         .map(|(_, m)| {
-            let content = vec![Spans::from(Span::raw(format!("{}", m)))];
+            let c: Vec<_> = m.split("-").collect();
+            let content = vec![
+                Spans::from(Span::styled(format!("{}", c[0]), Style::default().fg(Color::White))),
+                Spans::from(Span::styled(format!("{}", c[1]), Style::default().fg(Color::LightYellow))),
+            ];
             ListItem::new(content)
         })
         .collect();
     let messages =
         List::new(messages).block(Block::default().borders(Borders::ALL).title("Messages"));
-    f.render_widget(messages, top_chunks[1]);
+        f.render_stateful_widget(messages, top_chunks[1], &mut app.messages.state);
 
     // input area
     let input = Paragraph::new(app.input.as_ref())
