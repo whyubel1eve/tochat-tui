@@ -33,6 +33,8 @@ pub async fn run_app<B: Backend>(
             while let Some(msg) = rx2.recv().await {
                 let mut lock = app_clone.lock().unwrap();
                 (*lock).messages.items.push(msg);
+                let len = (*lock).messages.items.len() - 1;
+                (*lock).messages.state.select(Some(len));
             }
         }
     });
