@@ -65,7 +65,12 @@ pub fn ui<B: Backend>(f: &mut Frame<B>, app: &mut App) {
         })
         .collect();
     let messages =
-        List::new(messages).block(Block::default().borders(Borders::ALL).title("Messages"));
+        List::new(messages)
+            .block(Block::default().borders(Borders::ALL).title("Messages"))
+            .highlight_style(
+                Style::default()
+                .bg(Color::Rgb(40, 40, 40)),
+            );
         f.render_stateful_widget(messages, top_chunks[1], &mut app.messages.state);
 
     // input area
