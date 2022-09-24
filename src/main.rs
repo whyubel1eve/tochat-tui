@@ -26,6 +26,10 @@ enum Commands {
         #[clap(long)]
         name: String,
 
+        /// chat topic 
+        #[clap(long)]
+        topic: String,
+
         /// The listening address
         #[clap(
             long,
@@ -51,6 +55,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Commands::DM {
             key,
             name,
+            topic,
             relay_address,
             remote_id,
         } => {  
@@ -58,8 +63,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let (tx1, rx1) = mpsc::channel::<String>(32);
             let (tx2, rx2) = mpsc::channel::<String>(32);
 
-            let swarm = network::connection::establish_connection(key, relay_address, remote_id).await;
-            tokio::spawn(network::connection::handle_msg(swarm, rx1, tx2));
+            let swarm = network::connection::establish_connection(key, topic, relay_address, remote_id).await;
+            tokio::spawn(network::connection::handle_msg(swarm, rx1, tx2, topic.clone()));
             tui::bootstrap(tx1, rx2, name).await.unwrap();
             Ok(())
         }

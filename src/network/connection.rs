@@ -76,6 +76,7 @@ impl From<GossipsubEvent> for Event {
 
 pub async fn establish_connection(
     key: &String,
+    topic: &String,
     relay_address: &Multiaddr,
     remote_id: &Option<PeerId>,
 ) -> Swarm<Behaviour> {
@@ -103,7 +104,7 @@ pub async fn establish_connection(
     .multiplex(yamux::YamuxConfig::default())
     .boxed();
 
-    let topic = Topic::new("abc");
+    let topic = Topic::new(topic);
 
     // build swamr
     let mut swarm = {
@@ -261,6 +262,7 @@ pub async fn handle_msg(
     mut swarm: Swarm<Behaviour>,
     mut rx1: Receiver<String>,
     tx2: Sender<String>,
+    topic: String,
 ) {
     loop {
         tokio::select! {
@@ -268,7 +270,7 @@ pub async fn handle_msg(
             msg = rx1.recv() => {
                 swarm.behaviour_mut()
             .gossip
-            .publish(Topic::new("abc"), msg.unwrap().as_bytes())
+            .publish(Topic::new(&topic), msg.unwrap().as_bytes())
             .expect("publish error");
             },
             // receive
