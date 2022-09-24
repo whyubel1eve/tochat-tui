@@ -25,11 +25,11 @@ Then:
 ```sh
 cargo build --bin tochat
 cd tochat/target/debug
-# create your secret key, and keep it
-./tochat new
+# create your secret key or import an existed key
+./tochat new || ./tochat import --key
 # someone should be listening first
-./tochat dm --key `xxx` --name `xxx` --relay-address `xxx` --topic `xxx`
+./tochat dm --name `xxx` --relay-address `xxx` --topic `xxx`
 # another one dials
-./tochat dm --key `xxx` --name `xxx` --relay-address `xxx` --remote-id `xxx` --topic `xxx`
-# use `./tochat start --help` to check help details
+./tochat dm --name `xxx` --relay-address `xxx` --remote-id `xxx` --topic `xxx`
+# use `./tochat --help` to check help details
 ```
