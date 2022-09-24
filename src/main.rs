@@ -4,8 +4,8 @@ mod tui;
 use clap::{Parser, Subcommand};
 use libp2p::core::multiaddr::Multiaddr;
 use libp2p::PeerId;
-use std::error::Error;
 use tokio::sync::mpsc;
+use std::error::Error;
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
@@ -17,6 +17,13 @@ struct Cli {
 enum Commands {
     /// Create a new private key
     New,
+    /// Import your secret key
+    Import {
+         /// secret key
+         #[clap(long)]
+         key: String,
+    },
+    /// Direct Message
     DM {
         /// Fixed value to generate deterministic peer id.
         #[clap(long)]
@@ -52,6 +59,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     match &cli.command {
         Commands::New => network::secure::new_secret_key(),
+        Commands::Import { key } => network::secure::import_secret(key),
         Commands::DM {
             key,
             name,
@@ -59,6 +67,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             relay_address,
             remote_id,
         } => {  
+            network::secure::get_secret();
             
             let (tx1, rx1) = mpsc::channel::<String>(32);
             let (tx2, rx2) = mpsc::channel::<String>(32);
