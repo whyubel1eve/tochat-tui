@@ -25,10 +25,6 @@ enum Commands {
     },
     /// Direct Message
     DM {
-        /// Fixed value to generate deterministic peer id.
-        #[clap(long)]
-        key: String,
-
         /// nickname
         #[clap(long)]
         name: String,
@@ -61,18 +57,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Commands::New => network::secure::new_secret_key(),
         Commands::Import { key } => network::secure::import_secret(key),
         Commands::DM {
-            key,
             name,
             topic,
             relay_address,
             remote_id,
         } => {  
-            network::secure::get_secret();
+            let key = network::secure::get_secret();
             
             let (tx1, rx1) = mpsc::channel::<String>(32);
             let (tx2, rx2) = mpsc::channel::<String>(32);
 
-            let swarm = network::connection::establish_connection(key, topic, relay_address, remote_id).await;
+            let swarm = network::connection::establish_connection(&key, topic, relay_address, remote_id).await;
             tokio::spawn(network::connection::handle_msg(swarm, rx1, tx2, topic.clone()));
             tui::bootstrap(tx1, rx2, name).await.unwrap();
             Ok(())

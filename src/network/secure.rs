@@ -36,7 +36,12 @@ pub fn generate_ed25519(key: &String) -> identity::Keypair {
 }
 
 pub fn get_secret() -> String {
-    let buf = BufReader::new(OpenOptions::new().open("$HOME/.tochat/secret.json").expect("Please create or import a secret key"));
+    let home_path = env::var("HOME").unwrap();
+    let buf = BufReader::new(
+        OpenOptions::new()
+        .read(true)
+        .open(format!("{}{}", home_path, "/.tochat/secret.json"))
+        .expect("Please create or import a secret key"));
     serde_json::from_reader(buf).unwrap()
 }
 
