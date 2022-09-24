@@ -1,5 +1,4 @@
 use crate::network::secure::generate_ed25519;
-use crate::Mode;
 use chrono::prelude::*;
 
 use futures::executor::block_on;
@@ -76,7 +75,6 @@ impl From<GossipsubEvent> for Event {
 }
 
 pub async fn establish_connection(
-    mode: &Mode,
     key: &String,
     relay_address: &Multiaddr,
     remote_id: &Option<PeerId>,
@@ -85,6 +83,7 @@ pub async fn establish_connection(
 
     let local_peer_id = PeerId::from(local_key.public());
     info!("Local peer id: {:?}", local_peer_id);
+    println!("Local peer id: {:?}", local_peer_id);
 
     let (relay_transport, client) = Client::new_transport_and_behaviour(local_peer_id);
 
@@ -198,23 +197,21 @@ pub async fn establish_connection(
         }
     });
 
-    // establish relay-connection with remote peer or request listening-connection to relay
-    match *mode {
-        Mode::Dial => {
-            swarm
-                .dial(
-                    (*relay_address)
-                        .clone()
-                        .with(Protocol::P2pCircuit)
-                        .with(Protocol::P2p(PeerId::from((*remote_id).unwrap()).into())),
-                )
-                .unwrap();
-        }
-        Mode::Listen => {
-            swarm
-                .listen_on((*relay_address).clone().with(Protocol::P2pCircuit))
-                .unwrap();
-        }
+    // request listening-connection to relay
+    swarm
+        .listen_on((*relay_address).clone().with(Protocol::P2pCircuit))
+        .unwrap();
+
+    // establish relay-connection with remote peer
+    if *remote_id != None {
+        swarm
+        .dial(
+            (*relay_address)
+                .clone()
+                .with(Protocol::P2pCircuit)
+                .with(Protocol::P2p(PeerId::from((*remote_id).unwrap()).into())),
+        )
+        .unwrap();
     }
 
     // waiting for connection to be established
@@ -228,7 +225,6 @@ pub async fn establish_connection(
                 SwarmEvent::Behaviour(Event::Relay(client::Event::ReservationReqAccepted {
                     ..
                 })) => {
-                    assert!(*mode == Mode::Listen);
                     info!("Relay accepted our reservation request.");
                 }
                 SwarmEvent::Behaviour(Event::Relay(event)) => {

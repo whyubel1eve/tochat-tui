@@ -28,8 +28,8 @@ cd tochat/target/debug
 # create your secret key, and keep it
 ./tochat new
 # someone should be listening first
-RUST_LOG=info ./tochat start --mode listen --key `xxx` --name `xxx` --relay-address `xxx`
+./tochat dm --key `xxx` --name `xxx` --relay-address `xxx`
 # another one dials
-RUST_LOG=info ./tochat start --mode dial --key `xxx` --name `xxx` --remote-id `xxx` --relay-address `xxx`
+./tochat dm --key `xxx` --name `xxx` --relay-address `xxx` --remote-id `xxx`
 # use `./tochat start --help` to check help details
 ```

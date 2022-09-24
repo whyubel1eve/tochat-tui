@@ -2,14 +2,9 @@ mod network;
 mod tui;
 
 use clap::{Parser, Subcommand};
-
 use libp2p::core::multiaddr::Multiaddr;
-
 use libp2p::PeerId;
-
 use std::error::Error;
-
-use std::str::FromStr;
 use tokio::sync::mpsc;
 
 #[derive(Parser)]
@@ -22,11 +17,7 @@ struct Cli {
 enum Commands {
     /// Create a new private key
     New,
-    Start {
-        /// The mode (client-listen, client-dial).
-        #[clap(long)]
-        mode: Mode,
-
+    DM {
         /// Fixed value to generate deterministic peer id.
         #[clap(long)]
         key: String,
@@ -48,22 +39,6 @@ enum Commands {
     },
 }
 
-#[derive(Debug, Parser, PartialEq)]
-pub enum Mode {
-    Dial,
-    Listen,
-}
-
-impl FromStr for Mode {
-    type Err = String;
-    fn from_str(mode: &str) -> Result<Self, Self::Err> {
-        match mode {
-            "dial" => Ok(Mode::Dial),
-            "listen" => Ok(Mode::Listen),
-            _ => Err("Expected either 'dial' or 'listen'".to_string()),
-        }
-    }
-}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -73,8 +48,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     match &cli.command {
         Commands::New => network::secure::new_secret_key(),
-        Commands::Start {
-            mode,
+        Commands::DM {
             key,
             name,
             relay_address,
@@ -84,7 +58,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let (tx1, rx1) = mpsc::channel::<String>(32);
             let (tx2, rx2) = mpsc::channel::<String>(32);
 
-            let swarm = network::connection::establish_connection(mode, key, relay_address, remote_id).await;
+            let swarm = network::connection::establish_connection(key, relay_address, remote_id).await;
             tokio::spawn(network::connection::handle_msg(swarm, rx1, tx2));
             tui::bootstrap(tx1, rx2, name).await.unwrap();
             Ok(())
