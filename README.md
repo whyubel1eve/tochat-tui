@@ -26,7 +26,7 @@ Then:
 cargo build --bin tochat
 cd tochat/target/debug
 # create your secret key or import an existed key
-./tochat new || ./tochat import --key
+./tochat new || ./tochat import --key `xxx`
 # someone should be listening first
 ./tochat dm --name `xxx` --relay-address `xxx` --topic `xxx`
 # another one dials
