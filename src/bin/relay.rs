@@ -26,7 +26,7 @@ use libp2p::identify::{Identify, IdentifyConfig, IdentifyEvent};
 use libp2p::multiaddr::Protocol;
 use libp2p::ping::{Ping, PingConfig, PingEvent};
 use libp2p::relay::v2::relay::{self, Relay};
-use libp2p::swarm::{Swarm, SwarmEvent};
+use libp2p::swarm::{SwarmEvent, SwarmBuilder};
 use libp2p::tcp::{GenTcpConfig, TokioTcpTransport};
 use libp2p::Transport;
 use libp2p::{identity, NetworkBehaviour, PeerId};
@@ -65,7 +65,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
         )),
     };
 
-    let mut swarm = Swarm::new(transport, behaviour, local_peer_id);
+    let mut swarm =  SwarmBuilder::new(transport, behaviour, local_peer_id).executor(Box::new(|fut| {
+        tokio::spawn(fut);
+    }))
+    .build();
 
     // Listen on all interfaces
     let listen_addr = Multiaddr::empty()

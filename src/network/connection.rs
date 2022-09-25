@@ -132,6 +132,9 @@ pub async fn establish_connection(
         };
         SwarmBuilder::new(transport, behaviour, local_peer_id)
             .dial_concurrency_factor(10_u8.try_into().unwrap())
+            .executor(Box::new(|fut| {
+                tokio::spawn(fut);
+            }))
             .build()
     };
 
