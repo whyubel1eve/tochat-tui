@@ -24,6 +24,7 @@ use libp2p::{NetworkBehaviour, PeerId};
 use log::info;
 use std::convert::TryInto;
 use std::net::Ipv4Addr;
+use std::time::Duration;
 use tokio::sync::mpsc::{Receiver, Sender};
 
 #[derive(NetworkBehaviour)]
@@ -110,6 +111,7 @@ pub async fn establish_connection(
     let mut swarm = {
         // set a custom gossipsub
         let gossipsub_config = gossipsub::GossipsubConfigBuilder::default()
+            .idle_timeout(Duration::from_secs(60 * 60))
             .build()
             .expect("Valid config");
         let mut gossip = gossipsub::Gossipsub::new(
@@ -166,7 +168,7 @@ pub async fn establish_connection(
 
     // Connect to the relay server. Not for the reservation or relayed connection, but to (a) learn
     // our local public address and (b) enable a freshly started relay to learn its public address.
-    swarm.dial((*relay_address).clone()).unwrap();
+    swarm.dial(relay_address.clone()).unwrap();
     block_on(async {
         let mut learned_observed_addr = false;
         let mut told_relay_observed_addr = false;
@@ -200,14 +202,14 @@ pub async fn establish_connection(
 
     // request listening-connection to relay
     swarm
-        .listen_on((*relay_address).clone().with(Protocol::P2pCircuit))
+        .listen_on(relay_address.clone().with(Protocol::P2pCircuit))
         .unwrap();
 
     // establish relay-connection with remote peer
     if *remote_id != None {
         swarm
         .dial(
-            (*relay_address)
+                relay_address
                 .clone()
                 .with(Protocol::P2pCircuit)
                 .with(Protocol::P2p(PeerId::from((*remote_id).unwrap()).into())),
