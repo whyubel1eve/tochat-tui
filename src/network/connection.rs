@@ -123,7 +123,7 @@ pub async fn establish_connection(
 
         let behaviour = Behaviour {
             relay_client: client,
-            ping: Ping::new(PingConfig::new().with_keep_alive(false)),
+            ping: Ping::new(PingConfig::new().with_keep_alive(true)),
             identify: Identify::new(IdentifyConfig::new(
                 "/TODO/0.0.1".to_string(),
                 local_key.public(),

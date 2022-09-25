@@ -25,7 +25,7 @@ use libp2p::core::upgrade;
 use libp2p::identify::{Identify, IdentifyConfig, IdentifyEvent};
 use libp2p::multiaddr::Protocol;
 use libp2p::ping::{Ping, PingConfig, PingEvent};
-use libp2p::relay::v2::relay::{self, Relay};
+use libp2p::relay::v2::relay::{self, Relay, Config};
 use libp2p::swarm::{SwarmEvent, SwarmBuilder};
 use libp2p::tcp::{GenTcpConfig, TokioTcpTransport};
 use libp2p::Transport;
@@ -33,6 +33,7 @@ use libp2p::{identity, NetworkBehaviour, PeerId};
 use libp2p::{noise, Multiaddr};
 use std::error::Error;
 use std::net::{Ipv4Addr, Ipv6Addr};
+use std::time::Duration;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -56,9 +57,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .multiplex(libp2p::yamux::YamuxConfig::default())
         .boxed();
 
+    let mut relay_config = Config::default();
+    relay_config.max_circuit_duration = Duration::from_secs(60 * 60);
+
     let behaviour = Behaviour {
-        relay: Relay::new(local_peer_id, Default::default()),
-        ping: Ping::new(PingConfig::new().with_keep_alive(false)),
+        relay: Relay::new(local_peer_id, relay_config),
+        ping: Ping::new(PingConfig::new().with_keep_alive(true)),
         identify: Identify::new(IdentifyConfig::new(
             "/TODO/0.0.1".to_string(),
             local_key.public(),
