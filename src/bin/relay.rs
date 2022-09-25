@@ -35,7 +35,8 @@ use libp2p::Transport;
 use std::error::Error;
 use std::net::{Ipv4Addr, Ipv6Addr};
 
-fn main() -> Result<(), Box<dyn Error>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
 
     let opt = Opt::parse();
