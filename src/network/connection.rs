@@ -111,7 +111,7 @@ pub async fn establish_connection(
     let mut swarm = {
         // set a custom gossipsub
         let gossipsub_config = gossipsub::GossipsubConfigBuilder::default()
-            .idle_timeout(Duration::from_secs(60 * 60))
+            .idle_timeout(Duration::from_secs(3600))
             .build()
             .expect("Valid config");
         let mut gossip = gossipsub::Gossipsub::new(
