@@ -20,7 +20,6 @@
 // DEALINGS IN THE SOFTWARE.
 
 use clap::Parser;
-use futures::executor::block_on;
 use futures::stream::StreamExt;
 use libp2p::core::upgrade;
 use libp2p::identify::{Identify, IdentifyConfig, IdentifyEvent};
@@ -28,10 +27,10 @@ use libp2p::multiaddr::Protocol;
 use libp2p::ping::{Ping, PingConfig, PingEvent};
 use libp2p::relay::v2::relay::{self, Relay};
 use libp2p::swarm::{Swarm, SwarmEvent};
-use libp2p::tcp::{TokioTcpTransport, GenTcpConfig};
+use libp2p::tcp::{GenTcpConfig, TokioTcpTransport};
+use libp2p::Transport;
 use libp2p::{identity, NetworkBehaviour, PeerId};
 use libp2p::{noise, Multiaddr};
-use libp2p::Transport;
 use std::error::Error;
 use std::net::{Ipv4Addr, Ipv6Addr};
 
@@ -77,19 +76,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .with(Protocol::Tcp(opt.port));
     swarm.listen_on(listen_addr)?;
 
-    block_on(async {
-        loop {
-            match swarm.next().await.expect("Infinite Stream.") {
-                SwarmEvent::Behaviour(Event::Relay(event)) => {
-                    println!("{:?}", event)
-                }
-                SwarmEvent::NewListenAddr { address, .. } => {
-                    println!("Listening on {:?}", address);
-                }
-                _ => {}
+    loop {
+        match swarm.next().await.expect("Infinite Stream.") {
+            SwarmEvent::Behaviour(Event::Relay(event)) => {
+                println!("{:?}", event)
             }
+            SwarmEvent::NewListenAddr { address, .. } => {
+                println!("Listening on {:?}", address);
+            }
+            _ => {}
         }
-    })
+    }
 }
 
 #[derive(NetworkBehaviour)]
