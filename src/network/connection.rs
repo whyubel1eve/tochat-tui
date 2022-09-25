@@ -22,7 +22,6 @@ use libp2p::{NetworkBehaviour, PeerId};
 use log::info;
 use std::convert::TryInto;
 use std::net::Ipv4Addr;
-use std::time::Duration;
 use tokio::sync::mpsc::{Receiver, Sender};
 
 #[derive(NetworkBehaviour)]
@@ -109,7 +108,9 @@ pub async fn establish_connection(
     let mut swarm = {
         // set a custom gossipsub
         let gossipsub_config = gossipsub::GossipsubConfigBuilder::default()
-            .idle_timeout(Duration::from_secs(3600))
+            .mesh_n_low(1)
+            .mesh_n(2)
+            .mesh_outbound_min(1)
             .build()
             .expect("Valid config");
         let mut gossip = gossipsub::Gossipsub::new(
@@ -122,7 +123,7 @@ pub async fn establish_connection(
 
         let behaviour = Behaviour {
             relay_client: client,
-            ping: Ping::new(PingConfig::new().with_keep_alive(true)),
+            ping: Ping::new(PingConfig::new().with_keep_alive(false)),
             identify: Identify::new(IdentifyConfig::new(
                 "/TODO/0.0.1".to_string(),
                 local_key.public(),

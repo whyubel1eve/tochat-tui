@@ -58,7 +58,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let behaviour = Behaviour {
         relay: Relay::new(local_peer_id, Default::default()),
-        ping: Ping::new(PingConfig::new()),
+        ping: Ping::new(PingConfig::new().with_keep_alive(false)),
         identify: Identify::new(IdentifyConfig::new(
             "/TODO/0.0.1".to_string(),
             local_key.public(),
