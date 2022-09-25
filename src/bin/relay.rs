@@ -28,10 +28,10 @@ use libp2p::multiaddr::Protocol;
 use libp2p::ping::{Ping, PingConfig, PingEvent};
 use libp2p::relay::v2::relay::{self, Relay};
 use libp2p::swarm::{Swarm, SwarmEvent};
-use libp2p::tcp::TcpTransport;
-use libp2p::Transport;
+use libp2p::tcp::{TokioTcpTransport, GenTcpConfig};
 use libp2p::{identity, NetworkBehaviour, PeerId};
 use libp2p::{noise, Multiaddr};
+use libp2p::Transport;
 use std::error::Error;
 use std::net::{Ipv4Addr, Ipv6Addr};
 
@@ -46,13 +46,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     let local_peer_id = PeerId::from(local_key.public());
     println!("Local peer id: {:?}", local_peer_id);
 
-    let tcp_transport = TcpTransport::default();
-
     let noise_keys = noise::Keypair::<noise::X25519Spec>::new()
         .into_authentic(&local_key)
         .expect("Signing libp2p-noise static DH keypair failed.");
 
-    let transport = tcp_transport
+    let transport = TokioTcpTransport::new(GenTcpConfig::default())
         .upgrade(upgrade::Version::V1)
         .authenticate(noise::NoiseConfig::xx(noise_keys).into_authenticated())
         .multiplex(libp2p::yamux::YamuxConfig::default())

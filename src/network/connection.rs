@@ -7,7 +7,7 @@ use futures::prelude::*;
 use libp2p::core::multiaddr::{Multiaddr, Protocol};
 use libp2p::core::transport::OrTransport;
 use libp2p::core::upgrade;
-use libp2p::dns::DnsConfig;
+use libp2p::dns::TokioDnsConfig;
 use libp2p::gossipsub::{
     self, GossipsubEvent, IdentTopic as Topic, MessageAuthenticity};
 use libp2p::identify::{Identify, IdentifyConfig, IdentifyEvent, IdentifyInfo};
@@ -15,7 +15,7 @@ use libp2p::noise;
 use libp2p::ping::{Ping, PingConfig, PingEvent};
 use libp2p::relay::v2::client::{self, Client};
 use libp2p::swarm::{SwarmBuilder, SwarmEvent};
-use libp2p::tcp::{GenTcpConfig, TcpTransport};
+use libp2p::tcp::{GenTcpConfig, TokioTcpTransport};
 use libp2p::yamux;
 use libp2p::Transport;
 use libp2p::{dcutr, Swarm};
@@ -95,9 +95,9 @@ pub async fn establish_connection(
 
     let transport = OrTransport::new(
         relay_transport,
-        block_on(DnsConfig::system(TcpTransport::new(
+        TokioDnsConfig::system(TokioTcpTransport::new(
             GenTcpConfig::default().port_reuse(true),
-        )))
+        ))
         .unwrap(),
     )
     .upgrade(upgrade::Version::V1)
