@@ -95,7 +95,7 @@ pub async fn establish_connection(
 
     let c = relay_address.clone().to_string();
     let vec: Vec<_> = c.split("/").collect();
-    let rendezvous_point: PeerId = vec[c.len() - 1].parse().unwrap();
+    let rendezvous_point: PeerId = vec[vec.len() - 1].parse().unwrap();
 
     let (relay_transport, client) = Client::new_transport_and_behaviour(local_peer_id);
 
@@ -214,6 +214,7 @@ pub async fn establish_connection(
                 info!("Relay told us our public address: {:?}", observed_addr);
                 learned_observed_addr = true;
 
+                // default ttl is 7200s
                 swarm.behaviour_mut().rendezvous.register(
                     rendezvous::Namespace::from_static("rendezvous"),
                     rendezvous_point,
@@ -225,11 +226,9 @@ pub async fn establish_connection(
                 ttl,
                 rendezvous_node,
             })) => {
-                log::info!(
+                info!(
                     "Registered for namespace '{}' at rendezvous point {} for the next {} seconds",
-                    namespace,
-                    rendezvous_node,
-                    ttl
+                    namespace, rendezvous_node, ttl
                 );
                 registered = true;
             }
@@ -275,17 +274,19 @@ pub async fn establish_connection(
     for registration in regs {
         for address in registration.record.addresses() {
             let peer = registration.record.peer_id();
-            info!("Discovered peer {} at {}", peer, address);
+            if peer != local_peer_id {
+                info!("Discovered peer {} at {}", peer, address);
 
-            // establish relay-connection with remote peer
-            swarm
-                .dial(
-                    relay_address
-                        .clone()
-                        .with(Protocol::P2pCircuit)
-                        .with(Protocol::P2p(PeerId::from(peer).into())),
-                )
-                .unwrap();
+                // establish relay-connection with remote peer
+                swarm
+                    .dial(
+                        relay_address
+                            .clone()
+                            .with(Protocol::P2pCircuit)
+                            .with(Protocol::P2p(PeerId::from(peer).into())),
+                    )
+                    .unwrap();
+            }
         }
     }
 
