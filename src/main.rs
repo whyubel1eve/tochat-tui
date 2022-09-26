@@ -44,6 +44,23 @@ enum Commands {
         #[clap(long)]
         remote_id: Option<PeerId>,
     },
+    /// Group Message
+    Channel {
+        /// nickname
+        #[clap(long)]
+        name: String,
+
+        /// chat topic 
+        #[clap(long)]
+        topic: String,
+
+        /// The listening address
+        #[clap(
+            long,
+            default_value = "/ip4/1.12.76.121/tcp/4001/p2p/12D3KooWDpJ7As7BWAwRMfu1VU2WCqNjvq387JEYKDBj4kx6nXTN"
+        )]
+        relay_address: Multiaddr,
+    },
 }
 
 
@@ -67,8 +84,23 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let (tx1, rx1) = mpsc::channel::<String>(32);
             let (tx2, rx2) = mpsc::channel::<String>(32);
 
-            let swarm = network::connection::establish_connection(&key, topic, relay_address, remote_id).await;
-            tokio::spawn(network::connection::handle_msg(swarm, rx1, tx2, topic.clone()));
+            let swarm = network::connection_dm::establish_connection(&key, topic, relay_address, remote_id).await;
+            tokio::spawn(network::connection_dm::handle_msg(swarm, rx1, tx2, topic.clone()));
+            tui::bootstrap(tx1, rx2, name).await.unwrap();
+            Ok(())
+        },
+        Commands::Channel {
+            name,
+            topic,
+            relay_address,
+        } => {
+            let key = network::secure::get_secret();
+            
+            let (tx1, rx1) = mpsc::channel::<String>(32);
+            let (tx2, rx2) = mpsc::channel::<String>(32);
+
+            let swarm = network::connection_channel::establish_connection(&key, topic, relay_address).await;
+            tokio::spawn(network::connection_channel::handle_msg(swarm, rx1, tx2, topic.clone()));
             tui::bootstrap(tx1, rx2, name).await.unwrap();
             Ok(())
         }

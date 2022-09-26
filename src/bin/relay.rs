@@ -28,7 +28,7 @@ use libp2p::ping::{Ping, PingConfig, PingEvent};
 use libp2p::relay::v2::relay::{self, Relay, Config};
 use libp2p::swarm::{SwarmEvent, SwarmBuilder};
 use libp2p::tcp::{GenTcpConfig, TokioTcpTransport};
-use libp2p::Transport;
+use libp2p::{Transport, rendezvous};
 use libp2p::{identity, NetworkBehaviour, PeerId};
 use libp2p::{noise, Multiaddr};
 use std::error::Error;
@@ -67,6 +67,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             "/TODO/0.0.1".to_string(),
             local_key.public(),
         )),
+        rendezvous: rendezvous::server::Behaviour::new(rendezvous::server::Config::default()),
     };
 
     let mut swarm =  SwarmBuilder::new(transport, behaviour, local_peer_id).executor(Box::new(|fut| {
@@ -91,6 +92,27 @@ async fn main() -> Result<(), Box<dyn Error>> {
             SwarmEvent::NewListenAddr { address, .. } => {
                 println!("Listening on {:?}", address);
             }
+            SwarmEvent::Behaviour(Event::Rendezvous(
+                rendezvous::server::Event::PeerRegistered { peer, registration },
+            )) => {
+                log::info!(
+                    "Peer {} registered for namespace '{}'",
+                    peer,
+                    registration.namespace
+                );
+            }
+            SwarmEvent::Behaviour(Event::Rendezvous(
+                rendezvous::server::Event::DiscoverServed {
+                    enquirer,
+                    registrations,
+                },
+            )) => {
+                log::info!(
+                    "Served peer {} with {} registrations",
+                    enquirer,
+                    registrations.len()
+                );
+            }
             _ => {}
         }
     }
@@ -102,6 +124,7 @@ struct Behaviour {
     relay: Relay,
     ping: Ping,
     identify: Identify,
+    rendezvous: rendezvous::server::Behaviour,
 }
 
 #[derive(Debug)]
@@ -109,6 +132,7 @@ enum Event {
     Ping(PingEvent),
     Identify(IdentifyEvent),
     Relay(relay::Event),
+    Rendezvous(rendezvous::server::Event),
 }
 
 impl From<PingEvent> for Event {
@@ -126,6 +150,12 @@ impl From<IdentifyEvent> for Event {
 impl From<relay::Event> for Event {
     fn from(e: relay::Event) -> Self {
         Event::Relay(e)
+    }
+}
+
+impl From<rendezvous::server::Event> for Event {
+    fn from(e: rendezvous::server::Event) -> Self {
+        Event:: Rendezvous(e)
     }
 }
 

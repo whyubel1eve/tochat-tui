@@ -66,6 +66,7 @@ impl From<dcutr::behaviour::Event> for Event {
         Event::Dcutr(e)
     }
 }
+
 impl From<GossipsubEvent> for Event {
     fn from(e: GossipsubEvent) -> Self {
         Event::Gossip(e)
