@@ -4,6 +4,9 @@ This program uses some protocols from libp2p to accomplish **Hole-Punching**, li
 
 ## Installation
 
+You can choose to compile by yourself or download binaries from releases.
+
+### Compile
 ### 1. On public server:
 ```sh
 cargo build --bin relay
@@ -26,7 +29,10 @@ build:
 cargo build --bin tochat
 cd tochat/target/debug
 ```
-#### Direct Message:
+
+## Usage
+Linux users as below. Use `./tochat.exe` in **powershell** if you're under windows.
+### Direct Message:
 ```sh
 # create your secret key or import an existed key
 ./tochat new || ./tochat import --key `xxx`
@@ -37,7 +43,7 @@ cd tochat/target/debug
 
 # use `./tochat dm --help` to check help details
 ```
-#### Group Message:
+### Group Message:
 
 ```sh
 # create your secret key or import an existed key
